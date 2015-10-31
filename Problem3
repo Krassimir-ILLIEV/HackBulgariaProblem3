@@ -1,0 +1,114 @@
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import org.json.*;
+
+public class Jtest { 
+    //We will need library org.json. 
+    //Files all_packages.json and dependencies.json are read from current directory and 
+    //an installed_modules directory is also expected there. 
+    //If the former contains directories named after modules, these are not installed. 
+    //Otherwise, relevant directories are created. 
+    private static JSONObject ReadFromFile(String filename){
+        String jsonData = "";
+        BufferedReader br = null;
+        try {
+            String line;
+            br = new BufferedReader(new FileReader(filename));
+            while ((line = br.readLine()) != null) {
+                jsonData += line + "\n";
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (br != null)
+                    br.close();
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+        }
+        // System.out.println("File Content: \n" + jsonData);
+        JSONObject obj=null;
+        try{
+        obj = new JSONObject(jsonData);
+        }
+           catch(JSONException e){}     
+        return obj;
+        
+    }
+    private static void search(String module, JSONObject packages){ 
+        System.out.println("Installing "+ module+".");
+        
+        if (!packages.has(module)) return;
+        try{
+        JSONArray jsonarray = (JSONArray) packages.get(module);
+        if (jsonarray.length()>0){
+        String dep=jsonarray.getString(0);
+        
+        for (int i=1;i<jsonarray.length();i++){
+            dep +=" and "+ jsonarray.getString(i);
+        }
+        System.out.print("In order to install "+ module +", we need "+ dep+".\n");
+        }
+        Path p=Paths.get(".").toAbsolutePath().normalize();
+        
+        //System.out.println(p);
+        Path p1 = Paths.get(p.toString()+"\\installed_modules\\"+module);
+        //System.out.println(p1.toString());
+        if (!Files.exists(p1)){
+            for (int i=0;i<jsonarray.length();i++){
+                search(jsonarray.getString(i),packages);
+            }
+            new File(p1.toString()).mkdir();
+            
+        }
+        else {
+            System.out.println(module + " is already installed.");
+        }
+       
+       //Paths
+            
+        }
+        
+        catch(Exception e){
+            System.out.println(e);
+            return;
+            }
+        
+    }
+    public static void main(String[] args) {
+
+JSONObject packages = ReadFromFile("all_packages.json");
+JSONObject dependencies = ReadFromFile("dependencies.json");
+
+        
+try{
+    JSONArray projectDependencies = (JSONArray) dependencies.get("dependencies");
+    for (int i=0;i<projectDependencies.length();i++){ 
+        String s= (String) projectDependencies.get(i);
+        search(s,packages);
+    }
+    System.out.println("All done.");
+    
+    
+        /*Iterator<?> keys = packages.keys();
+        while (keys.hasNext()) {
+            String key = (String) keys.next();
+            JSONArray jsonarray = (JSONArray) packages.get(key);
+            System.out.println(key);
+            for (int i=0;i<jsonarray.length();i++){
+               System.out.println(i+" "+(String) jsonarray.get(i));
+            
+            }
+            //System.out.println(key+jsonarray);
+
+        }*/
+} catch(Exception e){}
+    }
+}
